@@ -62,7 +62,7 @@ const scan = async () => {
                                 coverage = matches.length/job.max_jobs;
                                 epochs++;
                                 if (!pendingJobs) keepWaiting = false;
-                                if (coverage >= ACCEPTABLE_CUTOFF && epochs > BREAK_OUT_EPOCHS) keepWaiting = false;
+                                if (Boolean(coverage >= ACCEPTABLE_CUTOFF && epochs > BREAK_OUT_EPOCHS) || epochs > 2*BREAK_OUT_EPOCHS) keepWaiting = false;
                                 await sleep(SCAN_INTERVAL);
                             }
                             await notify(signal, jobKey, job);
