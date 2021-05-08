@@ -149,6 +149,14 @@ for chunk in chunks:
     # show stream analytics
     display(StreamAnalytics()["data"], targetPrefix)
 
+epoch = 3
+pendingJobs = True
+
+while pendingJobs:
+    # wait for all pending jobs to be processed before next steps
+    sleep(epoch)
+    pendingJobs = masterNode("keys", f"{targetPrefix}*")["data"]
+
 # 3. tear down the `proc` worker
 print("Streaming ended. Tearing down PROC worker...")
 WorkerAction("TearDown", "proc", targetPrefix, runner, procCallable)
@@ -159,7 +167,6 @@ WorkerAction("SpinUp", "agg", targetPrefix, runner, aggCallable)
 
 # 5. wait for output
 output = None
-epoch = 3
 epochs = 0
 key = "DEMO_CHARMAP_%s" % targetPrefix
 while not output:
