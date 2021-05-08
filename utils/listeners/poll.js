@@ -4,7 +4,7 @@
     invoke a background callable task.
 */
 
-const { basicWorker } = require('../../models/redisWorker');
+const { coordinator } = require('../../models/redisWorker');
 const sleep = require('util').promisify(setTimeout);
 let {
     SCAN_INTERVAL,
@@ -23,7 +23,12 @@ const randFile = (data) => {
     return rFilePath;
 }
 
-const scanner = new basicWorker();
+const scanner = new coordinator();
+
+const notify = async (signal, jobKey, job) => {
+    signal = signal.replace('{}', jobKey);
+    await scanner.set(signal, JSON.stringify(job));
+}
 
 const scan = async () => {
     let keyPattern = `${targetPrefix}*`;
@@ -50,9 +55,10 @@ const scan = async () => {
                                 matches = await scanner.keys(keyPattern);
                                 pendingJobs = Boolean(matches.length < job.max_jobs);
                             }
+                            await notify(signal, jobKey, job);
+                            scanner.tearDown("proc", targetPrefix, runner, callable)
                         }
-                        signal = signal.replace('{}', jobKey);
-                        await scanner.set(signal, JSON.stringify(job));
+                        await notify(signal, jobKey, job);
                     }
                 } catch(err){}
                 await scanner.del(jobKey);
