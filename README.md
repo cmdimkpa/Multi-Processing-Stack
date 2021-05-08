@@ -1,4 +1,4 @@
-# Video Processing Server
+# Multi Processing Stack
 
 ## Tutorial Video
 
