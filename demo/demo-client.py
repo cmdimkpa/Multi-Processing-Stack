@@ -149,23 +149,13 @@ for chunk in chunks:
     # show stream analytics
     display(StreamAnalytics()["data"], targetPrefix)
 
-epoch = 3
-epochs = 0
-pendingJobs = True
-
-while pendingJobs:
-    # wait for all pending jobs to be processed before next steps
-    sleep(epoch)
-    epochs += 1
-    print("waiting for pending jobs after %d epochs..." % epochs)
-    pendingJobs = masterNode("keys", f"{targetPrefix}*")["data"]
-
 # 4. spin up an `agg` worker to aggregate the stream
 print("Spinning up AGG worker...")
 WorkerAction("SpinUp", "agg", targetPrefix, runner, aggCallable)
 
 # 5. wait for output
 output = None
+epoch = 3
 epochs = 0
 key = "DEMO_CHARMAP_%s" % targetPrefix
 while not output:
@@ -174,7 +164,7 @@ while not output:
     epochs += 1
     print("retrying after %d epochs..." % epochs)
 
-#7. Print Result
+# 7. Print Result
 print("Session ended. Output below:", output)
 
 elapsed = (now() - started).total_seconds()
