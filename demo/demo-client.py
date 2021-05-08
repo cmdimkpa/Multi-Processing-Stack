@@ -150,11 +150,14 @@ for chunk in chunks:
     display(StreamAnalytics()["data"], targetPrefix)
 
 epoch = 3
+epochs = 0
 pendingJobs = True
 
 while pendingJobs:
     # wait for all pending jobs to be processed before next steps
     sleep(epoch)
+    epochs += 1
+    print("waiting for pending jobs after %d epochs..." % epochs)
     pendingJobs = masterNode("keys", f"{targetPrefix}*")["data"]
 
 # 3. tear down the `proc` worker
