@@ -6,7 +6,7 @@
     streams.
 */
 
-const { basicWorker } = require('../../models/redisWorker');
+const { coordinator } = require('../../models/redisWorker');
 const sleep = require('util').promisify(setTimeout);
 let {
     SCAN_INTERVAL
@@ -23,7 +23,7 @@ const randFile = (data) => {
     return rFilePath;
 }
 
-const scanner = new basicWorker();
+const scanner = new coordinator();
 
 const scan = async () => {
     let keyPattern = `MULTIPROC_FINISHED_${targetPrefix}*`;
@@ -54,6 +54,8 @@ const scan = async () => {
                 let args_file = randFile(outputs);
                 let callable_cmd = `sudo ${runner} ${callablePath} ${args_file} ${targetPrefix}`;
                 exec(callable_cmd);
+                // self-terminate
+                scanner.tearDown("agg", targetPrefix, runner, callable);
             }
             
         }
