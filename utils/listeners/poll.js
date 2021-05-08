@@ -9,7 +9,9 @@ const sleep = require('util').promisify(setTimeout);
 let {
     SCAN_INTERVAL,
     PROCESSED_JOBS_PATTERN, 
-    FINISHED_JOBS_PATTERN
+    FINISHED_JOBS_PATTERN,
+    ACCEPTABLE_CUTOFF,
+    BREAK_OUT_EPOCHS
 } = require('../../utils/config.json');
 const [ targetPrefix, runner, callable ] = process.argv.slice(2,);
 const callablePath = `${__dirname.split('/listeners')[0]}/callables/${callable}`;
@@ -34,6 +36,8 @@ const scan = async () => {
     let keyPattern = `${targetPrefix}*`;
     let matches;
     let pendingJobs;
+    let coverage;
+    let epochs;
     while (true) {
         matches = await scanner.keys(keyPattern);
         if (matches.length > 0){
@@ -48,12 +52,18 @@ const scan = async () => {
                         let signal = job.job_number == job.max_jobs ?
                                      FINISHED_JOBS_PATTERN : PROCESSED_JOBS_PATTERN
                         if (signal === FINISHED_JOBS_PATTERN){
-                            pendingJobs = true;
+                            keepWaiting = true;
+                            coverage = 0;
+                            epochs = 0;
                             keyPattern = `MULTIPROC_OUTPUT_${targetPrefix}*`;
-                            while (pendingJobs){
-                                await sleep(SCAN_INTERVAL);
+                            while (keepWaiting){
                                 matches = await scanner.keys(keyPattern);
                                 pendingJobs = Boolean(matches.length < job.max_jobs);
+                                coverage = matches.length/job.max_jobs;
+                                epochs++;
+                                if (!pendingJobs) keepWaiting = false;
+                                if (coverage >= ACCEPTABLE_CUTOFF && epochs > BREAK_OUT_EPOCHS) keepWaiting = false;
+                                await sleep(SCAN_INTERVAL);
                             }
                             await notify(signal, jobKey, job);
                             scanner.tearDown("proc", targetPrefix, runner, callable)
