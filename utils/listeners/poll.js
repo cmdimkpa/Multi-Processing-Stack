@@ -8,7 +8,6 @@ const { basicWorker } = require('../../models/redisWorker');
 const sleep = require('util').promisify(setTimeout);
 let {
     SCAN_INTERVAL,
-    STREAM_CLOSURE_INTERVAL, 
     PROCESSED_JOBS_PATTERN, 
     FINISHED_JOBS_PATTERN
 } = require('../../utils/config.json');
@@ -29,6 +28,7 @@ const scanner = new basicWorker();
 const scan = async () => {
     let keyPattern = `${targetPrefix}*`;
     let matches;
+    let pendingJobs;
     while (true) {
         matches = await scanner.keys(keyPattern);
         if (matches.length > 0){
@@ -43,7 +43,13 @@ const scan = async () => {
                         let signal = job.job_number == job.max_jobs ?
                                      FINISHED_JOBS_PATTERN : PROCESSED_JOBS_PATTERN
                         if (signal === FINISHED_JOBS_PATTERN){
-                            await sleep(STREAM_CLOSURE_INTERVAL);
+                            pendingJobs = true;
+                            keyPattern = `MULTIPROC_OUTPUT_${targetPrefix}*`;
+                            while (pendingJobs){
+                                await sleep(SCAN_INTERVAL);
+                                matches = await scanner.keys(keyPattern);
+                                pendingJobs = Boolean(matches.length < job.max_jobs);
+                            }
                         }
                         signal = signal.replace('{}', jobKey);
                         await scanner.set(signal, JSON.stringify(job));
