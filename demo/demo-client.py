@@ -160,10 +160,6 @@ while pendingJobs:
     print("waiting for pending jobs after %d epochs..." % epochs)
     pendingJobs = masterNode("keys", f"{targetPrefix}*")["data"]
 
-# 3. tear down the `proc` worker
-print("Streaming ended. Tearing down PROC worker...")
-WorkerAction("TearDown", "proc", targetPrefix, runner, procCallable)
-
 # 4. spin up an `agg` worker to aggregate the stream
 print("Spinning up AGG worker...")
 WorkerAction("SpinUp", "agg", targetPrefix, runner, aggCallable)
@@ -177,10 +173,6 @@ while not output:
     sleep(epoch)
     epochs += 1
     print("retrying after %d epochs..." % epochs)
-
-# 6. Tear down the `agg` worker
-print("Tearing down AGG worker...")
-WorkerAction("TearDown", "agg", targetPrefix, runner, aggCallable)
 
 #7. Print Result
 print("Session ended. Output below:", output)
