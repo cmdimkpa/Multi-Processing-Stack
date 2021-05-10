@@ -89,25 +89,27 @@ async function StreamAnalytics(){
         message = "Success: the status of running streams is attached";
     
     let all_jobkeys = await masterNode.keys("MULTIPROC_PROCESSED_*");
-    let report = {};
+    let report = JSON.parse(await masterNode.get("STREAM_ANALYTICS") || '{}');
     let max_jobs = {};
     for (let jobKey of all_jobkeys){
-        let target = jobKey.split("MULTIPROC_PROCESSED_")[1];
-        target = target.split("_")[0];
+        let target = jobKey.split("MULTIPROC_PROCESSED_")[1].split("_")[0];
         if (target in report){
             report[target].count++
             report[target].percent_done = +(100*(report[target].count/max_jobs[target])).toFixed(2)
+            report[target].last_checked = Date.now()
         } else {
             try {
                 let sampleJob = JSON.parse(await masterNode.get(jobKey));
                 max_jobs[target] = sampleJob.max_jobs;
                 report[target] = {
                     count : 1,
-                    percent_done : +(100*(1/max_jobs[target])).toFixed(2)
+                    percent_done : +(100*(1/max_jobs[target])).toFixed(2),
+                    last_checked : Date.now()
                 }
             } catch(err){}
         }
     }
+    await masterNode.set("STREAM_ANALYTICS", JSON.stringify(report))
     return [code, message, report]
 }
 
