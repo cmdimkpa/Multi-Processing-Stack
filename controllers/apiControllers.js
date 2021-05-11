@@ -26,6 +26,13 @@ async function StreamJob(controllerParams){
         await masterNode.set(streamId, job_str);
         code = 201;
         message = `job #${streamId} has been added to the stream`;
+        let analyticsKey = `ONGOING_STREAM_${streamId}`;
+        let analyticsObject = {
+            count : job.job_number,
+            percent_done : +(100*(job.job_number/job.max_jobs)).toFixed(2),
+            last_checked : Date.now()
+        }
+        await masterNode.set(analyticsKey, JSON.stringify(analyticsObject));
     }
     return [code, message, data]
 }
@@ -88,28 +95,12 @@ async function StreamAnalytics(){
     let code = 200,
         message = "Success: the status of running streams is attached";
     
-    let all_jobkeys = await masterNode.keys("MULTIPROC_PROCESSED_*");
-    let report = JSON.parse(await masterNode.get("STREAM_ANALYTICS") || '{}');
-    let max_jobs = {};
+    let all_jobkeys = await masterNode.keys("ONGOING_STREAM_*");
+    let report = {};
     for (let jobKey of all_jobkeys){
-        let target = jobKey.split("MULTIPROC_PROCESSED_")[1].split("_")[0];
-        if (target in report){
-            report[target].count++
-            report[target].percent_done = +(100*(report[target].count/max_jobs[target])).toFixed(2)
-            report[target].last_checked = Date.now()
-        } else {
-            try {
-                let sampleJob = JSON.parse(await masterNode.get(jobKey));
-                max_jobs[target] = sampleJob.max_jobs;
-                report[target] = {
-                    count : 1,
-                    percent_done : +(100*(1/max_jobs[target])).toFixed(2),
-                    last_checked : Date.now()
-                }
-            } catch(err){}
-        }
+        let target = jobKey.split("ONGOING_STREAM_")[1].split("_")[0];
+        report[target] = JSON.parse(await masterNode.get(jobKey));
     }
-    await masterNode.set("STREAM_ANALYTICS", JSON.stringify(report))
     return [code, message, report]
 }
 
