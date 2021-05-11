@@ -24,20 +24,15 @@ baseHeaders = { "Content-Type" : "application/json" }
 
 def now(): return datetime.datetime.today()
 
-def display(source, targetPrefix):
-    max_ticks = 50
-    buffer = 3
+def display(done, maxJobs):
+    buffer = 2
     for i in range(buffer):
         print("")
-    for stream in source:
-        done = source[stream]['percent_done']
-        ticks = int(done/100*max_ticks)
-        tick_lines = "".join(['-' for i in range(ticks)])
-        indicator = ""
-        if targetPrefix in stream:
-            indicator = "* "
-        status = "%sstream:%s %s > %d percent complete" % (indicator, stream, tick_lines, done)
-        print(status)
+    percent_done = done/maxJobs*100
+    ticks = int(percent_done)
+    tick_lines = "".join(['-' for i in range(ticks)])
+    status = "stream progress: %s > %.2f percent complete" % (tick_lines, percent_done)
+    print(status)
 
 def get_uid(n=6):
     return str(random()).split(".")[1][:n]
@@ -71,11 +66,6 @@ def WorkerAction(actionType, agentType, targetPrefix, runner, callable):
     url = f"{masterNodeBaseURL}{actionType}Worker?agentType={agentType}&targetPrefix={targetPrefix}&runner={runner}&callable={callable}"
     payload = {}
     resp = http.put(url, json.dumps(payload), headers=baseHeaders)
-    return resp.json()
-
-def StreamAnalytics():
-    url = f"{masterNodeBaseURL}StreamAnalytics"
-    resp = http.get(url, headers=baseHeaders)
     return resp.json()
 
 def masterNode(command, key, dataObject={}):
@@ -146,8 +136,7 @@ for chunk in chunks:
         "chunk" : chunk
     }
     StreamJob(targetPrefix, jobId, job)
-    # show stream analytics
-    display(StreamAnalytics()["data"], targetPrefix)
+    display(jobId, num_chunks)
 
 # 4. spin up an `agg` worker to aggregate the stream
 print("Spinning up AGG worker...")
